@@ -3,6 +3,7 @@ import boto3
 import logging
 import json
 import os
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -121,32 +122,46 @@ def analyze_policy_document(policy_document):
         list: A list of potentially risky statements.
     """
     risky_statements = []
-    for statement in policy_document.get('Statement', []):
+    statements = policy_document.get('Statement', [])
+    # A policy with a single statement sometimes writes it as one object
+    # instead of a one item list; treat both shapes the same.
+    if isinstance(statements, dict):
+        statements = [statements]
+    for statement in statements:
         if isinstance(statement, str):
              logging.warning("Invalid statement format. It should be a dict.  Ignoring this statement.")
              continue
 
         effect = statement.get('Effect', '').lower()
         if effect == 'allow':
-            action = statement.get('Action')
-            resource = statement.get('Resource')
+            # Action and Resource each come as a single string or as a
+            # list. Normalise both to a set of strings first. The old
+            # code compared 'sts:AssumeRole' against a list it had just
+            # lowercased, so the comparison could never match, and the
+            # single string form was never checked at all.
+            actions = statement.get('Action') or []
+            if isinstance(actions, str):
+                actions = [actions]
+            action_set = {a.lower() for a in actions if isinstance(a, str)}
+            resources = statement.get('Resource') or []
+            if isinstance(resources, str):
+                resources = [resources]
 
-            if action == '*' or (isinstance(action, list) and '*' in action):
+            if '*' in action_set:
                 risky_statements.append({
                     'statement': statement,
                     'reason': 'Wildcard action'
                 })
-            elif resource == '*' or (isinstance(resource, list) and '*' in resource):
+            elif '*' in resources:
                 risky_statements.append({
                     'statement': statement,
                     'reason': 'Wildcard resource'
                 })
-            elif isinstance(action, list):
-                if 'sts:AssumeRole' in [a.lower() for a in action]:
-                    risky_statements.append({
-                        'statement': statement,
-                        'reason': 'sts:AssumeRole permission found.'
-                    })
+            elif 'sts:assumerole' in action_set:
+                risky_statements.append({
+                    'statement': statement,
+                    'reason': 'sts:AssumeRole permission found.'
+                })
 
     return risky_statements
 
@@ -169,13 +184,16 @@ def main():
     parser = setup_argparse()
     args = parser.parse_args()
 
-    # Input Validation
+    # Without a role name there is nothing to analyze, but the old code
+    # carried on and called AWS with a None role name, then printed an
+    # empty result and exited 0. That is a usage error, so say so here.
+    if not args.role_name:
+        parser.error("--role-name is required")
     try:
-        if args.role_name:
-            validate_role_name(args.role_name)
+        validate_role_name(args.role_name)
     except ValueError as e:
         logging.error(f"Invalid input: {e}")
-        return
+        sys.exit(1)
 
     profile_name = args.profile
     region_name = args.region or os.environ.get('AWS_REGION') or 'us-east-1'  # Default region
@@ -204,12 +222,14 @@ def main():
                 logging.info(f"Analysis results written to {args.output_file}")
             except Exception as e:
                 logging.error(f"Error writing results to file: {e}")
+                sys.exit(1)
         else:
             # Print results to console
             print(json.dumps(analysis_results, indent=4))
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
