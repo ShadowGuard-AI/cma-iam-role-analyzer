@@ -4,6 +4,7 @@ import logging
 import json
 import os
 import sys
+import urllib.parse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,9 +38,36 @@ def get_role_policies(iam_client, role_name):
     attached_policies = []
 
     try:
-        # Get inline policies
-        response = iam_client.get_role(RoleName=role_name)
-        inline_policies = response.get('Role', {}).get('RolePolicyList', [])
+        # Confirm the role exists. A failed lookup must not be reported
+        # as a role with no policies, so any error here is re-raised
+        # and main turns it into exit 1.
+        iam_client.get_role(RoleName=role_name)
+
+        # Get inline policies: list the names, fetch each document,
+        # and URL decode it. get_role does not return policy documents,
+        # and its RolePolicyList field holds names only.
+        marker = None
+        while True:
+            kwargs = {'RoleName': role_name}
+            if marker:
+                kwargs['Marker'] = marker
+            response = iam_client.list_role_policies(**kwargs)
+            for policy_name in response.get('PolicyNames', []):
+                doc_response = iam_client.get_role_policy(
+                    RoleName=role_name, PolicyName=policy_name)
+                document = doc_response.get('PolicyDocument', '')
+                if isinstance(document, dict):
+                    document = json.dumps(document)
+                else:
+                    document = urllib.parse.unquote_plus(document)
+                inline_policies.append({
+                    'PolicyName': policy_name,
+                    'PolicyDocument': document,
+                })
+            if response.get('IsTruncated'):
+                marker = response.get('Marker')
+            else:
+                break
 
         # Get attached managed policies
         paginator = iam_client.get_paginator('list_attached_role_policies')
@@ -50,7 +78,7 @@ def get_role_policies(iam_client, role_name):
 
     except Exception as e:
         logging.error(f"Error retrieving policies for role {role_name}: {e}")
-        return [], []
+        raise
 
 def analyze_policies(inline_policies, attached_policies, iam_client):
     """
