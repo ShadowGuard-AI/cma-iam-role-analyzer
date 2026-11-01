@@ -143,6 +143,14 @@ def analyze_policy_document(policy_document):
     """
     Analyzes a single policy document for potentially risky statements.
 
+    The CLI description promises privilege escalation paths; what
+    exists is the three smell tests below. The grants escalation
+    actually runs through, PassRole, creating policy versions,
+    attaching policies, are ordinary action strings to this function
+    and none of them is looked for, so a clean result means none of
+    the three smells, not no escalation path.
+    """
+
     Args:
         policy_document (dict): The policy document to analyze.
 
@@ -161,6 +169,10 @@ def analyze_policy_document(policy_document):
              continue
 
         effect = statement.get('Effect', '').lower()
+        # Conditions are never read: an Allow narrowed to one source
+        # address or one hour still flags exactly like an unconditional
+        # one, and NotAction statements, whose meaning inverts, are
+        # read here as if the listed actions were the granted ones.
         if effect == 'allow':
             # Action and Resource each come as a single string or as a
             # list. Normalise both to a set of strings first. The old
@@ -175,6 +187,13 @@ def analyze_policy_document(policy_document):
             if isinstance(resources, str):
                 resources = [resources]
 
+            # The elif chain gives a statement at most one reason: a
+            # wildcard action hides a wildcard resource and an
+            # AssumeRole grant sitting in the same statement. And both
+            # wildcard tests are exact equality, so the service shaped
+            # wildcards that carry most real overreach, s3:* or iam:*,
+            # and resource suffixes like a bucket ARN ending in /*,
+            # match nothing here and pass as unremarkable.
             if '*' in action_set:
                 risky_statements.append({
                     'statement': statement,
