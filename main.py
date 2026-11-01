@@ -139,17 +139,15 @@ def analyze_policies(inline_policies, attached_policies, iam_client):
 
     return analysis_results
 
+# The CLI description promises privilege escalation paths; what
+# exists in the function below is three smell tests. The grants
+# escalation actually runs through, PassRole, creating policy
+# versions, attaching policies, are ordinary action strings to it
+# and none of them is looked for, so a clean result means none of
+# the three smells, not no escalation path.
 def analyze_policy_document(policy_document):
     """
     Analyzes a single policy document for potentially risky statements.
-
-    The CLI description promises privilege escalation paths; what
-    exists is the three smell tests below. The grants escalation
-    actually runs through, PassRole, creating policy versions,
-    attaching policies, are ordinary action strings to this function
-    and none of them is looked for, so a clean result means none of
-    the three smells, not no escalation path.
-    """
 
     Args:
         policy_document (dict): The policy document to analyze.
