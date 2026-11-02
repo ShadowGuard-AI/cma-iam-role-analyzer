@@ -3,162 +3,97 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cma Iam Role Analyzer: what it is, how it runs, where it stops</title>
-<meta name="description" content="Cma Iam Role Analyzer is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.">
+<title>cma-iam-role-analyzer: The Keeper Round Through the Palm House</title>
+<meta name="description" content="Analyzes IAM roles in AWS to identify potential privilege escalation paths, checking wildcard actions, wildcard resources, and sts:AssumeRole over managed and inline policies.">
 <style>
-:root {
-  --bg: #101214; --panel: #1c1f22; --ink: #eee8dc;
-  --mut: #25292d;
-  --acc: #e8b339; --acc2: #c75432;
-  --line: #1c1f22;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink);
-  font-family: 'Trebuchet MS', sans-serif; line-height: 1.55; }
-code, pre, .mono { font-family: 'Courier New', monospace; }
-a { color: var(--acc2); }
-.hero { padding: 3rem 6vw 1rem; }
-.hero img.banner { width: 100%; height: auto; border: 1px solid var(--line);
-  border-radius: 10px; }
-.logo { width: 92px; height: 92px; border-radius: 18px;
-  border: 1px solid var(--line); }
-h1 { font-size: 2.4rem; margin: 0.4em 0 0.1em; }
-h2 { border-bottom: 2px solid var(--acc); padding-bottom: 0.2em;
-  margin-top: 2em; }
-.lede { font-size: 1.15rem; max-width: 62ch; }
-main { padding: 0 6vw 3rem; max-width: 1180px; margin: 0 auto; }
-.grid { display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
-.card { background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 1rem 1.2rem; }
-.card.pop { animation: rise 0.7s ease both; }
-@keyframes rise { from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; } }
-pre.code { background: #101014; color: #e8e6df; padding: 1rem 1.2rem;
-  border-radius: 12px; overflow-x: auto; font-size: 0.86rem;
-  border-left: 5px solid var(--acc); }
-table { border-collapse: collapse; width: 100%; }
-td, th { border-bottom: 1px solid var(--line); padding: 0.45rem 0.6rem;
-  text-align: left; }
-.shots { display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.shots img { width: 100%; height: auto; border: 1px solid var(--line);
-  border-radius: 10px; background: #f4f1e8; }
-footer { padding: 2rem 6vw; border-top: 1px solid var(--line);
-  color: var(--mut); }
-.rail { display: flex; gap: 1.2rem; align-items: flex-start; }
-.rail nav { position: sticky; top: 1rem; min-width: 180px; }
-@media (max-width: 760px) { .rail { flex-direction: column; }
-  .rail nav { position: static; } }
-@media (prefers-reduced-motion: reduce) {
-  .card.pop { animation: none; } * { scroll-behavior: auto; } }
+@font-face{font-family:'Baloo Thambi 2';src:url('fonts/BalooThambi2.ttf') format('truetype');}
+@font-face{font-family:'Barlow';src:url('fonts/Barlow.ttf') format('truetype');}
+:root{--moss:#4a603a;--mossd:#2e4226;--bark:#5c4026;--fern:#bacdb6;--red:#a52030;--paper:#eee8cd;--ink:#1d211a}
+*{box-sizing:border-box}body{margin:0;background:var(--moss);color:var(--ink);font-family:'Barlow',sans-serif;line-height:1.65}
+h1,h2,h3{font-family:'Baloo Thambi 2',sans-serif;color:var(--bark)}
+.hero{background:linear-gradient(180deg,#8fa393,#bacdb6 55%,var(--moss))}.hero img.heroimg{width:100%;height:54vh;object-fit:cover;display:block}
+.hero .in,main,footer{max-width:1120px;margin:0 auto;padding:1rem 6vw 2rem}.logo{width:210px;background:#d6decb}
+nav{display:flex;gap:1rem;flex-wrap:wrap;margin:1.2rem 0}
+.btn{display:inline-block;text-decoration:none;font-family:'Baloo Thambi 2',sans-serif;color:var(--bark);background:linear-gradient(180deg,#a9bf97,#8aa873);border:3px solid var(--bark);border-radius:50% 50% 12px 12px/22px 22px 12px 12px;padding:.85rem 1.2rem .6rem;position:relative}
+.btn:hover{box-shadow:0 0 0 3px rgba(232,205,120,.55),0 -6px 14px rgba(232,205,120,.5)}
+.btn:active{background:#748f5c;color:#2e2012}.btn:focus-visible{outline:4px double var(--fern);outline-offset:3px}
+a{color:var(--mossd)}a::before{content:'';display:inline-block;width:15px;height:13px;margin-right:.5em;border-radius:50% 50% 40% 40%;background:repeating-linear-gradient(180deg,#a8874f 0 3px,#7c6234 3px 5px);vertical-align:0}
+a:hover::before{background:repeating-linear-gradient(180deg,#c04a58 0 3px,var(--red) 3px 5px)}
+.btn::before{content:none}
+.case{background:var(--fern);border:4px solid #6d8156;border-radius:8px;padding:.4rem 1.5rem 1.3rem;margin:1.8rem 0;position:relative}
+.case::after{content:'';position:absolute;top:10px;right:12px;width:22px;height:30px;border-radius:0 100% 0 100%;background:#567a44;transform:rotate(24deg)}
+pre{background:#2e3527;color:var(--fern);padding:1rem;overflow-x:auto}
+.rings{height:22px;margin:1.6rem 0;background:radial-gradient(circle at 8px 11px,transparent 5px,var(--fern) 6px,transparent 7px);background-size:34px 22px}
+.callout{background:var(--bark);color:var(--fern);padding:.2rem 1.3rem 1rem;margin:1.3rem 0}.callout h3{color:var(--fern)}
+.flag{border:3px solid var(--red);padding:.2rem 1.2rem 1rem;margin:1.2rem 0}.flag h3{color:var(--red)}
+.entry{display:flex;gap:1rem;padding:.55rem 0;border-bottom:1px solid rgba(29,33,26,.25)}.entry b{font-family:'Baloo Thambi 2',sans-serif;min-width:150px}
+table{border-collapse:collapse}td,th{padding:.4rem .8rem;border-bottom:1px solid rgba(29,33,26,.25);text-align:left}
 </style>
 </head>
-<body class="layout-note">
-<!-- This page exists for cma-iam-role-analyzer alone: the layout (notebook),
-     the colors, and the type were picked for this project, not
-     shared with the other project pages. The code block below is
-     copied from the file it names, line for line. If it looks
-     plain, that is because the project is plain, and I would
-     rather the page match the project than dress it up. The one
-     thing I will not do here is oversell: what this project does
-     not do is stated on the page, not hidden from it. -->
+<body>
 <header class="hero">
-  <img class="logo" src="assets/logo.png" alt="Cma Iam Role Analyzer logo">
-  <img class="banner" src="assets/banner.png" alt="">
-  <h1>Cma Iam Role Analyzer</h1>
-  <p class="mono"><a href="https://github.com/ShadowGuard-AI/cma-iam-role-analyzer">github.com/ShadowGuard-AI/cma-iam-role-analyzer</a></p>
+<img class="heroimg" src="assets/intro-banner.png" alt="The Palm House in winter with no lettering: fern beds beaded with water in front, the walk running away under mist, palm trunks rising on both sides, the admission book shut on its lectern, and snow held on the outside of the roof panes">
+<div class="in">
+<img class="logo" src="assets/logo.png" alt="One curved rib of the Palm House roof with a snow line along its panes and one small palm crown behind the glass, over a herbarium label reading CMA-IAM-ROLE-ANALYZER">
+<h1>cma-iam-role-analyzer</h1>
+<p>The keeper round through the house, read from the door inward. One named role, checked at the door against a short written list of three things that may not pass unremarked.</p>
+<nav>
+<a class="btn" href="#role">Check This Role</a>
+<a class="btn" href="#params">Write Results to a JSON File</a>
+<a class="btn" href="#params">Use This AWS Profile</a>
+<a class="btn" href="#params">Show Help</a>
+</nav>
+</div>
 </header>
-
 <main>
-  <section class="rail">
-    <nav aria-label="on this page">
-      <p class="mono"><a href="#run">Run it</a><br>
-      <a href="#files">The files</a><br>
-      <a href="#sheets">The sheets</a><br>
-      <a href="https://github.com/ShadowGuard-AI/cma-iam-role-analyzer">The repo</a></p>
-    </nav>
-    <div>
-      <p class="lede">Cma Iam Role Analyzer is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.</p>
-      <div class="grid">
-        <div class="card pop"><h3>What it is</h3>
-          <p>Cma Iam Role Analyzer: 3 files, 240 counted
-          lines across Python 221, Markdown 18, Text 1. One job, done in the
-          open, in files you can read.</p></div>
-        <div class="card pop"><h3>The biggest piece</h3>
-          <p><code>main.py</code> carries the most
-          lines. If the project grows, that file is where the growth
-          lands first, for better or worse.</p></div>
-        <div class="card pop"><h3>The honest gap</h3>
-          <p>No test files yet. That is the honest gap, and the roadmap in the visuals folder says what the first one should cover.</p></div>
-      </div>
-      <section id="run">
-        <h2>Run it</h2>
-        <p>The repo README has the exact commands for this one. The
-        shape is the shape for most of my projects: clone it, read the
-        top file first so you know what will happen, then run it on
-        something you do not mind breaking.</p>
-        <p class="mono">$ git clone https://github.com/ShadowGuard-AI/cma-iam-role-analyzer.git<br>$ cd cma-iam-role-analyzer</p>
-      </section>
-      
-  <section aria-label="real code">
-    <h2>The code, as it sits in the repo</h2>
-    <p>From <code>main.py</code>, line 8 on. I did
-    not tidy it for the page. What you see is what the file has.</p>
-    <pre class="code"><code>logging.basicConfig(level=logging.INFO, format=&#x27;%(asctime)s - %(levelname)s - %(message)s&#x27;)
-
-def setup_argparse():
-    &quot;&quot;&quot;
-    Sets up the argument parser for the CLI.
-    
-    Returns:
-        argparse.ArgumentParser: The argument parser object.
-    &quot;&quot;&quot;
-    parser = argparse.ArgumentParser(description=&#x27;Analyzes IAM roles in AWS to identify potential privilege escalation paths.&#x27;)
-    parser.add_argument(&#x27;--role-name&#x27;, help=&#x27;The name of the IAM role to analyze.&#x27;)
-    parser.add_argument(&#x27;--profile&#x27;, help=&#x27;AWS CLI profile to use for authentication.&#x27;)
-    parser.add_argument(&#x27;--region&#x27;, help=&#x27;AWS region to use. Defaults to configured region or us-east-1.&#x27;)
-    parser.add_argument(&#x27;--output-file&#x27;, help=&#x27;The file to write the analysis results to (JSON format).&#x27;)
-    return parser
-
-def get_role_policies(iam_client, role_name):
-    &quot;&quot;&quot;
-    Retrieves inline and attached managed policies for a given IAM role.
-
-    Args:
-        iam_client: Boto3 IAM client.</code></pre>
-  </section>
-      <section id="files">
-        <h2>The files that matter</h2>
-        <table><tr><th>File</th><th>Lines</th></tr>
-        <tr><td><code>main.py</code></td><td>221</td></tr>
-        <tr><td><code>README.md</code></td><td>18</td></tr>
-        <tr><td><code>requirements.txt</code></td><td>1</td></tr>
-        </table>
-        <p>Names doing the work: <span class="mono">setup_argparse, get_role_policies, analyze_policies, analyze_policy_document, validate_role_name, main</span>.</p>
-      </section>
-      <section id="sheets">
-        <h2>Drawn by hand</h2>
-        <p>I sketch my projects on notebook paper so I have to
-        understand them well enough to draw them. The full set,
-        with the counts and how they were counted, is the
-        <a href="https://github.com/ShadowGuard-AI/cma-iam-role-analyzer/tree/main/cma-iam-role-analyzer-Visuals">cma-iam-role-analyzer-Visuals</a>
-        folder in the repo. Nothing is drawn over the binder holes.
-        That is a rule, not a style.</p>
-        <div class="shots">
-          <img src="assets/architecture.png" alt="Hand drawn architecture sheet for Cma Iam Role Analyzer">
-          <img src="assets/flowchart.png" alt="Hand drawn flowchart sheet for Cma Iam Role Analyzer">
-          <img src="assets/product-map.png" alt="Hand drawn product map sheet for Cma Iam Role Analyzer">
-        </div>
-      </section>
-    </div>
-  </section>
+<section class="case" id="role"><h2>One Named Role</h2>
+<p>cma-iam-role-analyzer analyzes IAM roles in AWS to identify potential privilege escalation paths. It uses boto3 with the operator's own AWS profile. It is AWS only, and it works on a single named role.</p>
+<p>If a role lookup fails, the run reports the error and exits 1 instead of returning an empty result.</p>
+<h2>Three Checks at the Door</h2>
+<p>Wildcard actions.</p>
+<p>Wildcard resources.</p>
+<p>sts:AssumeRole.</p>
+<h2>Managed Policies and Inline Policies</h2>
+<p>The attached managed policies of the role.</p>
+<p>The inline policies of the role.</p>
+<p>A flagged statement receives at most one of the three checks, because the tests run as a chain.</p>
+</section>
+<div class="rings"></div>
+<section class="case"><h2>Install, at the Door</h2>
+<pre>git clone https://github.com/ShadowStrikeHQ/cma-iam-role-analyzer</pre>
+<div class="flag"><h3>Clone Line Points to the Wrong House</h3>
+<p>The install line as printed points to ShadowStrikeHQ, not to ShadowGuard-AI. It is shown flagged rather than quietly corrected. The README gives no change of directory step and no install step after the clone.</p></div>
+<p>Repository fact, not a README step: the repository carries a requirements.txt whose only entry is boto3&gt;=1.34.40.</p>
+<h2>Usage, Two Lines Side by Side</h2>
+<pre>./cma-iam-role-analyzer [params]</pre>
+<p>That line is a placeholder. The invocation the argument parser in main.py actually accepts is:</p>
+<pre>python3 main.py --role-name ROLE [--profile PROFILE] [--region REGION] [--output-file FILE]</pre>
+<p>Here --role-name is required, and the remaining options follow it. The README line is not rewritten to look correct; the two lines stand side by side so a reader can see the gap.</p>
+</section>
+<div class="rings"></div>
+<section class="case" id="params"><h2>The Five Book Entries</h2>
+<div class="entry"><b>-h</b><span>Show help message and exit</span></div>
+<div class="entry"><b>--role-name</b><span>The name of the IAM role to analyze. From the parser: a run without it is refused as a usage error.</span></div>
+<div class="entry"><b>--profile</b><span>AWS CLI profile to use for authentication.</span></div>
+<div class="entry"><b>--region</b><span>AWS region to use. Defaults to configured region or us-east-1.</span></div>
+<div class="entry"><b>--output-file</b><span>No description provided</span></div>
+<div class="callout"><h3>No Description Provided in the README</h3>
+<p>The entry above is printed with the README's own words, left exactly as they stand. A smaller fact from the parser's help text: the file to write the analysis results to, in JSON format. The gap between the two descriptions is part of the record.</p></div>
+</section>
+<div class="rings"></div>
+<section class="case"><h2>What a Clean Run Does Not Prove</h2>
+<p>Only statements whose effect is Allow are examined, and conditions on a statement are never read, so a grant narrowed by a condition flags in the same way as an open one.</p>
+<p>The three tests are exact matches. A service shaped grant, one ending in a colon and a star, is not caught by the wildcard action test. A resource string ending in a slash and a star is not caught by the wildcard resource test.</p>
+<p>Because the tests run as a chain, one statement receives at most one reason, even when more than one of the three applies to it.</p>
+<p>A run that finds nothing therefore means that none of the three checks matched. It does not mean that no privilege escalation path exists.</p>
+<p><a href="https://github.com/ShadowGuard-AI/cma-iam-role-analyzer">The repository on GitHub</a></p>
+</section>
+<div class="rings"></div>
+<section class="case"><h2>Licence Bay, Closing the Round</h2>
+<pre>Copyright (c) ShadowStrikeHQ</pre>
+<p>The README closes with that line, printed as it stands and flagged beside the install line's fault. The repository's own LICENSE file carries the MIT License. Both facts are shown. Neither is silently made to agree with the other.</p>
+</section>
 </main>
-<footer>
-  <p>Cma Iam Role Analyzer is one of my projects. This page was written
-  from the repo itself on 2026-10-30: the counts are the
-  repo's counts, the code is the repo's code, and the gaps are the
-  repo's gaps.</p>
-</footer>
+<footer><p>Theme: Kew's Palm House in Winter. Type: Baloo Thambi 2 for display, Barlow for reading, both SIL Open Font License 1.1. The lettering reference Snow Play was reference only and is not embedded.</p></footer>
 </body>
 </html>
