@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="The palm house in three depths: snow falls slowly outside the roof panes, fern fronds sway and a condensation bead runs down a glazing bar inside, and one vine tendril curls slowly at the foot of the nearest bed">
+<rect x="0" y="0" width="1200" height="300" fill="#aebbb0"/>
+<path d="M60 300 A 620 420 0 0 1 1140 300" fill="none" stroke="#2e4226" stroke-width="7"/>
+<path d="M60 288 A 620 420 0 0 1 1140 288" fill="none" stroke="#e8eee8" stroke-width="5"/>
+<path d="M180 300 A 500 340 0 0 1 1020 300" fill="none" stroke="#4a603a" stroke-width="5"/>
+<g fill="#ffffff">
+<circle cx="200" cy="-10" r="4"><animate attributeName="cy" values="-10;180" dur="14s" repeatCount="indefinite"/></circle>
+<circle cx="480" cy="-10" r="3"><animate attributeName="cy" values="-10;170" dur="18s" begin="3s" repeatCount="indefinite"/></circle>
+<circle cx="760" cy="-10" r="4"><animate attributeName="cy" values="-10;180" dur="16s" begin="6s" repeatCount="indefinite"/></circle>
+<circle cx="1020" cy="-10" r="3"><animate attributeName="cy" values="-10;165" dur="13s" begin="1s" repeatCount="indefinite"/></circle>
+</g>
+<line x1="600" y1="60" x2="600" y2="230" stroke="#6e7c6a" stroke-width="4"/>
+<circle cx="600" cy="90" r="5" fill="#dcebe2"><animate attributeName="cy" values="90;215" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.9;1" dur="11s" repeatCount="indefinite"/></circle>
+<g stroke="#567a44" stroke-width="5" fill="none">
+<path d="M300 250 q-30 -34 -64 -30"><animateTransform attributeName="transform" type="rotate" values="0 300 250;-5 300 250;0 300 250" dur="9s" repeatCount="indefinite"/></path>
+<path d="M900 250 q30 -34 64 -30"><animateTransform attributeName="transform" type="rotate" values="0 900 250;5 900 250;0 900 250" dur="10s" repeatCount="indefinite"/></path>
+</g>
+<rect x="0" y="252" width="1200" height="48" fill="#36482e"/>
+<path d="M120 284 q40 -4 52 -22 q10 -16 26 -12 q-14 2 -16 14 q-2 14 12 16" fill="none" stroke="#bacdb6" stroke-width="4">
+<animate attributeName="stroke-dasharray" values="0 220;220 0" dur="20s" repeatCount="indefinite"/></path>
+</svg>
